@@ -6,21 +6,24 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import it.polito.tdp.baseball.model.Adiacenza;
 import it.polito.tdp.baseball.model.Appearances;
-import it.polito.tdp.baseball.model.Arco;
+
 import it.polito.tdp.baseball.model.People;
 import it.polito.tdp.baseball.model.Team;
 
 
+
 public class BaseballDAO {
 	
-	public List<People> readAllPlayers(){
+	public void readAllPlayers(Map<String,People> idMap){
 		String sql = "SELECT * "
 				+ "FROM people";
-		List<People> result = new ArrayList<People>();
+		
 
 		try {
 			Connection conn = DBConnect.getConnection();
@@ -28,7 +31,8 @@ public class BaseballDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-				result.add(new People(rs.getString("playerID"), 
+				if(!idMap.containsKey(rs.getString("playerID"))) {
+				People people = new People(rs.getString("playerID"), 
 						rs.getString("birthCountry"), 
 						rs.getString("birthCity"), 
 						rs.getString("deathCountry"), 
@@ -42,11 +46,13 @@ public class BaseballDAO {
 						getBirthDate(rs), 
 						getDebutDate(rs), 
 						getFinalGameDate(rs), 
-						getDeathDate(rs)) );
+						getDeathDate(rs));
+				idMap.put(rs.getString("playerID"), people);
+				}
 			}
 
 			conn.close();
-			return result;
+			
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -193,4 +199,78 @@ public class BaseballDAO {
 		return null;
 	}
 
+
+
+	public List<People> getVertici(int anno,int salario, Map<String,People> idMap){
+		String sql = "SELECT p.playerID as id "
+				+ "FROM people p, salaries s "
+				+ "WHERE p.playerID = s.playerID "
+				+ "AND s.year = ? and s.salary > ?*1000000";
+		List<People> result = new LinkedList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, anno);
+			st.setInt(2, salario);
+			ResultSet rs = st.executeQuery();
+			while (rs.next()) {
+				result.add(idMap.get(rs.getString("id")));
+			}
+			
+			rs.close();
+			st.close();
+			conn.close();
+			return result;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	public List<Adiacenza> getAdiacenze(int anno,int salario, Map<String,People> idMap){
+		String sql = "WITH giocatore AS( "
+				+ "SELECT p.playerID "
+				+ "FROM people p, salaries s "
+				+ "WHERE p.playerID = s.playerID "
+				+ "AND s.year = ? and s.salary > ?*1000000) "
+				+ "SELECT g1.playerID, g2.playerID "
+				+ "FROM giocatore g1, giocatore g2, appearances a1,appearances a2 "
+				+ "WHERE g1.playerID <>g2.playerID "
+				+ "AND g1.playerID = a1.playerID "
+				+ "AND g2.playerID = a2.playerID "
+				+ "AND a1.teamID = a2.teamID "
+				+ "AND a1.year = ? "
+				+ "AND a2.year = a1.year";
+		List<Adiacenza> result = new LinkedList<Adiacenza>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, anno);
+			st.setInt(2, salario);
+			st.setInt(3, anno);
+			ResultSet rs = st.executeQuery();
+			
+			while (rs.next()) {
+				People sorgente = idMap.get(rs.getString("g1.playerID"));
+				People destinazione = idMap.get(rs.getString("g2.playerID"));
+				if(sorgente != null && destinazione != null) {
+					result.add(new Adiacenza(sorgente, 
+							destinazione));
+				} else {
+					System.out.println("Errore in getAdiacenze");
+				}
+			}
+			rs.close();
+			st.close();
+			conn.close();
+			
+			return result;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+
+}
 }

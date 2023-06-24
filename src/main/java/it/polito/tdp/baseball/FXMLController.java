@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
 
-import it.polito.tdp.baseball.model.Grado;
+
 import it.polito.tdp.baseball.model.Model;
 import it.polito.tdp.baseball.model.People;
 import javafx.event.ActionEvent;
@@ -50,12 +50,51 @@ public class FXMLController {
     @FXML
     void doCalcolaConnesse(ActionEvent event) {
     	
+    	txtResult.appendText("\n");
+    	int connesse = this.model.componentiConnesse();
+    	txtResult.appendText("Ci sono " + connesse + " componenti connesse");
+    	
     }
 
     
     
     @FXML
     void doCreaGrafo(ActionEvent event) {
+    	
+    	txtResult.clear();
+    	
+    	int anno;
+    	int salario;
+    	try {
+    		anno = Integer.parseInt(txtYear.getText());
+    		
+    	} catch (NumberFormatException e) {
+    		txtResult.setText("Inserisci un anno");
+    		return;
+    	}
+    	
+    	if(Integer.parseInt(txtYear.getText())> 2019 || Integer.parseInt(txtYear.getText())< 1871) {
+    		txtResult.setText("Inserisci un anno valido");
+    		return;
+    	}
+    	
+    	try {
+    		salario = Integer.parseInt(txtSalary.getText());
+    	} catch (NumberFormatException e) {
+    		txtResult.setText("Inserisci un salario valido");
+    		return;
+    	}
+    	
+    	this.model.creaGrafo(anno,salario);
+    	
+    	txtResult.appendText("GRAFO CREATO!\n");
+    	txtResult.appendText("# VERTICI: " + model.getNVertici() + "\n");
+    	txtResult.appendText("# ARCHI: " + model.getNArchi() + "\n");
+    	
+    	btnGradoMassimo.setDisable(false);
+    	btnConnesse.setDisable(false);
+    	btnDreamTeam.setDisable(false);
+    	
     	
     }
 
@@ -68,6 +107,10 @@ public class FXMLController {
     
     @FXML
     void doGradoMassimo(ActionEvent event) {
+    	
+    	String risultato = model.gradoMax();
+    	txtResult.appendText("\n");
+    	txtResult.appendText(risultato);
 
     }
 
